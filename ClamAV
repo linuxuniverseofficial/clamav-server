@@ -1,0 +1,31 @@
+
+sudo apt update && sudo apt install clamav clamav-daemon clamav-freshclam -y
+
+sudo systemctl stop clamav-freshclam
+sudo freshclam
+sudo systemctl start clamav-freshclam
+
+sudo clamscan -r -i --bell /mnt
+
+Breakdown of the flags:
+-r (Recursive): Scans all files and subfolders within /mnt.
+-i (Infected): Only prints infected files to the terminal (otherwise, you'll see a wall of "OK" messages).
+--bell: Plays a sound if a virus is found (handy if you're doing other things).
+/mnt: The target directory.
+
+If you want to automatically move infected files to a specific folder (safer than deleting) instead of just reporting them, you can use:
+sudo clamscan -r -i --move=/path/to/quarantine /mnt
+
+sudo crontab -e
+0 3 * * 0 clamscan -r -i /mnt >> /var/log/clamav_mnt_scan.log 2>&1
+0 3 * * 0 clamscan -r -i /mnt > /var/log/clamav/manual_scan_$(date +\%Y-\%m-\%d).log 2>&1
+0 3 * * 0 (date; clamscan -r -i /mnt; echo "-------------------") >> /var/log/clamav/history_scan.log 2>&1
+
+/var/log/clamav/clamav.log (Scanning via daemon)
+/var/log/clamav/freshclam.log (Atualizações de assinaturas)
+
+# Para ver apenas o que foi detectado de positivo no histórico:
+grep "FOUND" /var/log/clamav/history_scan.log
+
+TO DELETE: (CAREFULL)
+0 0 * * * find /var/log/clamav/ -name "*.log" -mtime +15 -delete
