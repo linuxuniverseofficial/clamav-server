@@ -1,0 +1,44 @@
+sudo apt install rkhunter chkrootkit -y
+
+RUN FIRST:
+sudo rkhunter --propupd
+sudo rkhunter --check
+
+RUN SECOND:
+sudo chkrootkit -q
+
+O que aparecer em ambos é provável ameaça real!
+
+#!/bin/bash
+
+echo "Iniciando varredura combinada... Isso pode levar alguns minutos."
+
+# 1. Executa o rkhunter
+# Filtra apenas avisos (Warnings) e remove cores/formatação para o log
+sudo rkhunter --check --sk --no-colors --report-warnings-only > rk_results.txt
+
+# 2. Executa o chkrootkit
+# O modo -q (quiet) já ajuda, mas filtramos por 'INFECTED' para garantir
+sudo chkrootkit -q | grep "INFECTED" > chk_results.txt
+
+echo "--- RESULTADOS CRUZADOS ---"
+
+if [ ! -s rk_results.txt ] && [ ! -s chk_results.txt ]; then
+    echo "Nenhuma ameaça óbvia detectada por nenhum dos dois."
+else
+    echo "Verificando itens presentes em ambos os relatórios..."
+    # Compara os arquivos buscando linhas ou padrões similares
+    # Nota: Como os nomes de arquivos/rootkits variam entre as ferramentas,
+    # o comando abaixo busca por termos comuns detectados.
+    grep -Ff chk_results.txt rk_results.txt
+    
+    echo "--------------------------"
+    echo "Relatório Individual RKHunter:"
+    cat rk_results.txt
+    echo "--------------------------"
+    echo "Relatório Individual Chkrootkit:"
+    cat chk_results.txt
+fi
+
+# Limpeza opcional
+# rm rk_results.txt chk_results.txt
